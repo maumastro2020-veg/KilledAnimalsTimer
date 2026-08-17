@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { computeSpeciesBreakdown, computeTotalAnimalsKilled } from "@/lib/deathRates";
-import { formatCount } from "@/lib/format";
+import { COMPARISON_EVENTS, computeComparisonMultiple } from "@/lib/comparisonEvents";
+import { formatCount, formatMultiple } from "@/lib/format";
+import { useActivistMessage, saveActivistMessage, DEFAULT_ACTIVIST_MESSAGE } from "@/lib/activistMessage";
+import CollapsibleSection from "@/components/CollapsibleSection";
 
 const STORAGE_KEY = "kat_timer_state";
 const TIMER_EVENT = "kat-timer-change";
@@ -77,10 +80,14 @@ function subscribeNever() {
   return () => {};
 }
 
+// getSnapshot must return a stable value when there's no active subscription —
+// Date.now() on every call (even while inactive) tears on any unrelated re-render
+// (e.g. toggling the comparison panel while stopped), which useSyncExternalStore
+// reports as "Maximum update depth exceeded".
 function useClock(active: boolean): number {
   return useSyncExternalStore(
     active ? subscribeToClock : subscribeNever,
-    () => Date.now(),
+    active ? () => Date.now() : () => 0,
     () => 0,
   );
 }
@@ -99,6 +106,20 @@ function formatElapsed(ms: number): string {
 export default function Timer() {
   const state = useTimerState();
   const now = useClock(state.status === "running");
+
+  const message = useActivistMessage();
+  const [isEditingMessage, setIsEditingMessage] = useState(false);
+  const [messageDraft, setMessageDraft] = useState(message);
+
+  const startEditingMessage = useCallback(() => {
+    setMessageDraft(message);
+    setIsEditingMessage(true);
+  }, [message]);
+
+  const saveMessage = useCallback(() => {
+    saveActivistMessage(messageDraft.trim() || DEFAULT_ACTIVIST_MESSAGE);
+    setIsEditingMessage(false);
+  }, [messageDraft]);
 
   const handleStart = useCallback(() => {
     saveState({ status: "running", startedAt: Date.now(), stoppedAt: null });
@@ -130,7 +151,7 @@ export default function Timer() {
             Timer Calculator
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Track the length of this conversation.
+            Time elapsed
           </p>
         </div>
 
@@ -142,13 +163,57 @@ export default function Timer() {
         </div>
 
         {state.status === "idle" && (
-          <button
-            type="button"
-            onClick={handleStart}
-            className="flex h-40 w-40 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold text-white shadow-lg transition-colors hover:bg-emerald-700 active:bg-emerald-800"
-          >
-            Start
-          </button>
+          <div className="flex w-full flex-col items-center gap-6">
+            <button
+              type="button"
+              onClick={handleStart}
+              className="flex h-40 w-40 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold text-white shadow-lg transition-colors hover:bg-emerald-700 active:bg-emerald-800"
+            >
+              Start
+            </button>
+
+            {isEditingMessage ? (
+              <div className="flex w-full flex-col gap-2 text-left">
+                <label
+                  htmlFor="activist-message"
+                  className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                >
+                  Your message to pedestrians
+                </label>
+                <textarea
+                  id="activist-message"
+                  value={messageDraft}
+                  onChange={(e) => setMessageDraft(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-zinc-300 bg-white p-3 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingMessage(false)}
+                    className="rounded-full px-4 py-2 text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveMessage}
+                    className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={startEditingMessage}
+                className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-500"
+              >
+                Edit your message to pedestrians
+              </button>
+            )}
+          </div>
         )}
 
         {state.status === "running" && (
@@ -162,39 +227,69 @@ export default function Timer() {
         )}
 
         {state.status === "stopped" && (
-          <div className="flex w-full flex-col items-center gap-6">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Conversation stopped at {formatElapsed(elapsedMs)}.
-            </p>
-
+          <div className="flex w-full flex-col items-center gap-8">
             <div className="flex flex-col items-center gap-1">
               <span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Animals killed worldwide, same duration
               </span>
-              <span className="text-4xl font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+              <span className="text-7xl font-extrabold tabular-nums text-red-600 dark:text-red-500">
                 ≈ {formatCount(totalAnimals)}
               </span>
             </div>
 
-            <ul className="w-full divide-y divide-zinc-200 rounded-xl border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800">
-              {breakdown.map(({ species, count }) => (
-                <li
-                  key={species.id}
-                  className="flex items-center justify-between px-4 py-2 text-sm"
-                >
-                  <span className="text-zinc-700 dark:text-zinc-300">{species.label}</span>
-                  <span className="font-medium tabular-nums text-zinc-950 dark:text-zinc-50">
-                    {formatCount(count)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <CollapsibleSection title="Animal deaths" defaultOpen={false}>
+              <div className="flex w-full flex-col gap-4">
+                <ul className="w-full divide-y divide-zinc-200 rounded-xl border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800">
+                  {breakdown.map(({ species, count }) => (
+                    <li
+                      key={species.id}
+                      className="flex items-center justify-between px-4 py-2 text-sm"
+                    >
+                      <span className="text-zinc-700 dark:text-zinc-300">{species.label}</span>
+                      <span className="font-medium tabular-nums text-zinc-950 dark:text-zinc-50">
+                        {formatCount(count)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
 
-            <p className="max-w-sm text-xs leading-relaxed text-zinc-400 dark:text-zinc-600">
-              Estimated from global annual slaughter figures (FAOSTAT and
-              fishcount.org.uk), spread evenly across this conversation&apos;s
-              duration — not deaths caused by the conversation itself.
-            </p>
+                <p className="text-xs leading-relaxed text-zinc-400 dark:text-zinc-600">
+                  Estimated from global annual slaughter figures (FAOSTAT and
+                  fishcount.org.uk), spread evenly across this conversation&apos;s
+                  duration — not deaths caused by the conversation itself.
+                </p>
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="My message" defaultOpen={true}>
+              <div className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+                {message}
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="The scale of numbers" defaultOpen={true}>
+              <div className="flex w-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-800 dark:bg-zinc-900">
+                <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
+                  For scale, not a comparison of suffering — these are among
+                  history&apos;s deadliest events.
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {COMPARISON_EVENTS.map((event) => (
+                    <li key={event.id} className="text-sm">
+                      <span className="font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
+                        {formatMultiple(computeComparisonMultiple(totalAnimals, event))}×
+                      </span>{" "}
+                      <span className="text-zinc-700 dark:text-zinc-300">
+                        the death toll of {event.label} ({event.yearRange})
+                      </span>
+                      <div className="text-xs text-zinc-400 dark:text-zinc-600">
+                        {event.source}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </CollapsibleSection>
 
             <button
               type="button"
