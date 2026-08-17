@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import NavHeader from "@/components/NavHeader";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,6 +22,10 @@ export const metadata: Metadata = {
   description: "A toolkit for vegan activists and people exploring veganism.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#059669",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -28,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
         <NavHeader />
         <div className="flex flex-1 flex-col">{children}</div>
       </body>

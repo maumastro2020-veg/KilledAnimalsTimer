@@ -5,6 +5,7 @@ import { computeSpeciesBreakdown, computeTotalAnimalsKilled } from "@/lib/deathR
 import { COMPARISON_EVENTS, computeComparisonMultiple } from "@/lib/comparisonEvents";
 import { formatCount, formatHeroAbbreviation, formatMultiple } from "@/lib/format";
 import CollapsibleSection from "@/components/CollapsibleSection";
+import InstallPrompt from "@/components/InstallPrompt";
 
 const STORAGE_KEY = "kat_timer_state";
 const TIMER_EVENT = "kat-timer-change";
@@ -230,6 +231,12 @@ export default function Timer() {
                 {state.status === "idle" ? "Start" : "Stop"}
               </span>
             </button>
+
+            {state.status === "idle" && (
+              <div className="mt-8">
+                <InstallPrompt />
+              </div>
+            )}
           </div>
         )}
 
