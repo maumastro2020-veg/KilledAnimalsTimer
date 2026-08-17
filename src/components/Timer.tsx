@@ -316,7 +316,7 @@ export default function Timer() {
                   </div>
                 </CollapsibleSection>
 
-                <CollapsibleSection title="The scale of numbers" defaultOpen={true}>
+                <CollapsibleSection title="The scale of numbers" defaultOpen={false}>
                   <div className="flex w-full flex-col gap-3">
                     <p className="text-xs text-zinc-500 italic dark:text-zinc-400">
                       For scale, not a comparison of suffering — these are among
