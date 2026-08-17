@@ -14,12 +14,12 @@ export default function CollapsibleSection({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section className="flex w-full flex-col gap-3">
+    <section className="w-full border-t border-zinc-200 dark:border-zinc-800">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold text-zinc-950 dark:text-zinc-50"
+        className="flex w-full items-center justify-between gap-2 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-zinc-950 dark:text-zinc-50"
       >
         {title}
         <svg
@@ -29,7 +29,7 @@ export default function CollapsibleSection({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
+          className={`h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform dark:text-zinc-600 ${
             open ? "rotate-180" : ""
           }`}
         >
@@ -37,7 +37,7 @@ export default function CollapsibleSection({
         </svg>
       </button>
 
-      {open && children}
+      {open && <div className="pb-4">{children}</div>}
     </section>
   );
 }

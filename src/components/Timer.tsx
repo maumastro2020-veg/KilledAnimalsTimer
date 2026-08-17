@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { computeSpeciesBreakdown, computeTotalAnimalsKilled } from "@/lib/deathRates";
 import { COMPARISON_EVENTS, computeComparisonMultiple } from "@/lib/comparisonEvents";
-import { formatCount, formatMultiple } from "@/lib/format";
-import { useActivistMessage, saveActivistMessage, DEFAULT_ACTIVIST_MESSAGE } from "@/lib/activistMessage";
+import { formatCount, formatHeroAbbreviation, formatMultiple } from "@/lib/format";
 import CollapsibleSection from "@/components/CollapsibleSection";
 
 const STORAGE_KEY = "kat_timer_state";
@@ -103,23 +102,34 @@ function formatElapsed(ms: number): string {
     : `${pad(minutes)}:${pad(seconds)}`;
 }
 
+// Hero digits are always 1-3 characters (each unit tier tops out just under
+// 1000), so sizing keys off digit count rather than measuring rendered width.
+// The vw coefficients are tuned against the max-w-sm (384px) content column,
+// not the full viewport, so the digits stay dominant on mobile without
+// overrunning the column once the viewport grows past it.
+function heroDigitsFontSize(digitCount: number): string {
+  if (digitCount <= 1) return "clamp(80px, 50vw, 220px)";
+  if (digitCount === 2) return "clamp(72px, 46vw, 200px)";
+  return "clamp(56px, 32vw, 136px)";
+}
+
+function heroUnitFontSize(digitCount: number): string {
+  if (digitCount <= 1) return "clamp(22px, 14vw, 60px)";
+  if (digitCount === 2) return "clamp(20px, 12vw, 54px)";
+  return "clamp(16px, 9vw, 38px)";
+}
+
+const ROUNDED_DISPLAY_FONT = "ui-rounded, 'SF Pro Rounded', 'Segoe UI', -apple-system, sans-serif";
+
+// "00:00" (5 chars) fits comfortably inside the ring; once hours kick in
+// ("00:00:00", 8 chars) the clock needs to shrink to keep clear of the border.
+function ringClockFontSize(formatted: string): string {
+  return formatted.length > 5 ? "clamp(28px, 9vw, 40px)" : "clamp(32px, 11vw, 52px)";
+}
+
 export default function Timer() {
   const state = useTimerState();
   const now = useClock(state.status === "running");
-
-  const message = useActivistMessage();
-  const [isEditingMessage, setIsEditingMessage] = useState(false);
-  const [messageDraft, setMessageDraft] = useState(message);
-
-  const startEditingMessage = useCallback(() => {
-    setMessageDraft(message);
-    setIsEditingMessage(true);
-  }, [message]);
-
-  const saveMessage = useCallback(() => {
-    saveActivistMessage(messageDraft.trim() || DEFAULT_ACTIVIST_MESSAGE);
-    setIsEditingMessage(false);
-  }, [messageDraft]);
 
   const handleStart = useCallback(() => {
     saveState({ status: "running", startedAt: Date.now(), stoppedAt: null });
@@ -143,158 +153,202 @@ export default function Timer() {
   const totalAnimals = useMemo(() => computeTotalAnimalsKilled(elapsedMs), [elapsedMs]);
   const breakdown = useMemo(() => computeSpeciesBreakdown(elapsedMs), [elapsedMs]);
 
+  const heroAbbrev = useMemo(() => formatHeroAbbreviation(totalAnimals), [totalAnimals]);
+  const heroDigitCount = heroAbbrev.digits.length;
+
+  const allFishCount = useMemo(
+    () => breakdown.filter((e) => e.species.category === "aquatic").reduce((sum, e) => sum + e.count, 0),
+    [breakdown],
+  );
+  const chickenCount = breakdown.find((e) => e.species.id === "chickens")?.count ?? 0;
+  const pigCount = breakdown.find((e) => e.species.id === "pigs")?.count ?? 0;
+  const cattleCount = breakdown.find((e) => e.species.id === "cattle")?.count ?? 0;
+
+  const covidEvent = COMPARISON_EVENTS.find((e) => e.id === "covid19");
+  const wwiiEvent = COMPARISON_EVENTS.find((e) => e.id === "wwii");
+
+  const summaryItems = [
+    { value: formatCount(allFishCount), label: "All fish" },
+    { value: formatCount(chickenCount), label: "Chickens" },
+    { value: formatCount(pigCount), label: "Pigs" },
+    { value: formatCount(cattleCount), label: "Cattle (cows)" },
+    ...(covidEvent
+      ? [
+          {
+            value: `${formatMultiple(computeComparisonMultiple(totalAnimals, covidEvent))}×`,
+            label: `The death toll of ${covidEvent.label} (${covidEvent.yearRange})`,
+          },
+        ]
+      : []),
+    ...(wwiiEvent
+      ? [
+          {
+            value: `${formatMultiple(computeComparisonMultiple(totalAnimals, wwiiEvent))}×`,
+            label: `The death toll of ${wwiiEvent.label} (${wwiiEvent.yearRange})`,
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-10 font-sans dark:bg-black">
-      <main className="flex w-full max-w-sm flex-col items-center gap-10 text-center">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-            Timer Calculator
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Time elapsed
-          </p>
-        </div>
-
-        <div
-          className="tabular-nums text-6xl font-bold text-zinc-950 dark:text-zinc-50"
-          aria-live="polite"
-        >
-          {formatElapsed(elapsedMs)}
-        </div>
-
-        {state.status === "idle" && (
-          <div className="flex w-full flex-col items-center gap-6">
-            <button
-              type="button"
-              onClick={handleStart}
-              className="flex h-40 w-40 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold text-white shadow-lg transition-colors hover:bg-emerald-700 active:bg-emerald-800"
-            >
-              Start
-            </button>
-
-            {isEditingMessage ? (
-              <div className="flex w-full flex-col gap-2 text-left">
-                <label
-                  htmlFor="activist-message"
-                  className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
-                >
-                  Your message to pedestrians
-                </label>
-                <textarea
-                  id="activist-message"
-                  value={messageDraft}
-                  onChange={(e) => setMessageDraft(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border border-zinc-300 bg-white p-3 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingMessage(false)}
-                    className="rounded-full px-4 py-2 text-sm text-zinc-500 hover:underline dark:text-zinc-400"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveMessage}
-                    className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={startEditingMessage}
-                className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-500"
-              >
-                Edit your message to pedestrians
-              </button>
-            )}
+    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-10 font-sans dark:bg-black">
+      <main className="flex w-full max-w-sm flex-1 flex-col">
+        {state.status !== "stopped" && (
+          <div className="w-full text-left">
+            <h1 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+              Timer Calculator
+            </h1>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Time elapsed</p>
           </div>
         )}
 
-        {state.status === "running" && (
-          <button
-            type="button"
-            onClick={handleStop}
-            className="flex h-40 w-40 items-center justify-center rounded-full bg-red-600 text-2xl font-semibold text-white shadow-lg transition-colors hover:bg-red-700 active:bg-red-800"
-          >
-            Stop
-          </button>
+        {state.status !== "stopped" && (
+          <div className="flex w-full flex-1 flex-col items-center justify-center">
+            <button
+              type="button"
+              onClick={state.status === "idle" ? handleStart : handleStop}
+              className={`flex aspect-square w-[70%] max-w-xs flex-col items-center justify-center gap-2 rounded-full border-2 border-zinc-950 bg-transparent transition-colors dark:border-zinc-50 ${
+                state.status === "idle"
+                  ? "hover:border-emerald-600 dark:hover:border-emerald-500"
+                  : "hover:border-red-600 dark:hover:border-red-500"
+              }`}
+            >
+              <span
+                className="tabular-nums font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50"
+                style={{ fontFamily: ROUNDED_DISPLAY_FONT, fontSize: ringClockFontSize(formatElapsed(elapsedMs)) }}
+                aria-live="polite"
+              >
+                {formatElapsed(elapsedMs)}
+              </span>
+              <span
+                className={`text-sm font-bold tracking-widest uppercase ${
+                  state.status === "idle"
+                    ? "text-emerald-600 dark:text-emerald-500"
+                    : "text-red-600 dark:text-red-500"
+                }`}
+              >
+                {state.status === "idle" ? "Start" : "Stop"}
+              </span>
+            </button>
+          </div>
         )}
 
         {state.status === "stopped" && (
-          <div className="flex w-full flex-col items-center gap-8">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Animals killed worldwide, same duration
+          <div className="flex w-full flex-col items-start gap-8 text-left">
+            <div className="flex flex-col items-start">
+              <span className="text-lg font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+                {formatElapsed(elapsedMs)}
               </span>
-              <span className="text-7xl font-extrabold tabular-nums text-red-600 dark:text-red-500">
-                ≈ {formatCount(totalAnimals)}
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">Time elapsed</span>
+            </div>
+
+            <div className="flex w-full flex-col items-start">
+              <div className="flex items-start" style={{ fontFamily: ROUNDED_DISPLAY_FONT }}>
+                <span
+                  className="font-extrabold leading-[0.82] tracking-tight text-zinc-950 tabular-nums dark:text-zinc-50"
+                  style={{ fontSize: heroDigitsFontSize(heroDigitCount) }}
+                >
+                  {heroAbbrev.digits}
+                </span>
+                {heroAbbrev.unit && (
+                  <span
+                    className="mt-2 ml-0.5 font-extrabold text-zinc-950 dark:text-zinc-50"
+                    style={{ fontSize: heroUnitFontSize(heroDigitCount) }}
+                  >
+                    {heroAbbrev.unit}
+                  </span>
+                )}
+              </div>
+
+              <span className="mt-4 text-lg font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+                ≈{formatCount(totalAnimals)}
+              </span>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                Animals killed worldwide, same duration
               </span>
             </div>
 
-            <CollapsibleSection title="Animal deaths" defaultOpen={false}>
-              <div className="flex w-full flex-col gap-4">
-                <ul className="w-full divide-y divide-zinc-200 rounded-xl border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800">
-                  {breakdown.map(({ species, count }) => (
-                    <li
-                      key={species.id}
-                      className="flex items-center justify-between px-4 py-2 text-sm"
-                    >
-                      <span className="text-zinc-700 dark:text-zinc-300">{species.label}</span>
-                      <span className="font-medium tabular-nums text-zinc-950 dark:text-zinc-50">
-                        {formatCount(count)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                <p className="text-xs leading-relaxed text-zinc-400 dark:text-zinc-600">
-                  Estimated from global annual slaughter figures (FAOSTAT and
-                  fishcount.org.uk), spread evenly across this conversation&apos;s
-                  duration — not deaths caused by the conversation itself.
-                </p>
+            <div className="flex w-full flex-col">
+              <div className="border-b-[1.5px] border-zinc-950 pb-2 text-xs font-bold uppercase tracking-wide text-zinc-950 dark:border-zinc-50 dark:text-zinc-50">
+                Summary
               </div>
-            </CollapsibleSection>
-
-            <CollapsibleSection title="My message" defaultOpen={true}>
-              <div className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-                {message}
+              <div className="mt-4 grid w-full grid-cols-2 gap-x-4 gap-y-5">
+                {summaryItems.map((item) => (
+                  <div key={item.label}>
+                    <p className="text-xl font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+                      {item.value}
+                    </p>
+                    <p className="mt-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+                      {item.label}
+                    </p>
+                  </div>
+                ))}
               </div>
-            </CollapsibleSection>
+            </div>
 
-            <CollapsibleSection title="The scale of numbers" defaultOpen={true}>
-              <div className="flex w-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-800 dark:bg-zinc-900">
-                <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
-                  For scale, not a comparison of suffering — these are among
-                  history&apos;s deadliest events.
-                </p>
-                <ul className="flex flex-col gap-2">
-                  {COMPARISON_EVENTS.map((event) => (
-                    <li key={event.id} className="text-sm">
-                      <span className="font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
-                        {formatMultiple(computeComparisonMultiple(totalAnimals, event))}×
-                      </span>{" "}
-                      <span className="text-zinc-700 dark:text-zinc-300">
-                        the death toll of {event.label} ({event.yearRange})
-                      </span>
-                      <div className="text-xs text-zinc-400 dark:text-zinc-600">
-                        {event.source}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+            <div className="flex w-full flex-col">
+              <div className="border-b-[1.5px] border-zinc-950 pb-2 text-xs font-bold uppercase tracking-wide text-zinc-950 dark:border-zinc-50 dark:text-zinc-50">
+                More information
               </div>
-            </CollapsibleSection>
+
+              <div className="flex w-full flex-col [&>section:first-child]:border-t-0">
+                <CollapsibleSection title="Animal deaths" defaultOpen={false}>
+                  <div className="flex w-full flex-col">
+                    <ul className="flex w-full flex-col">
+                      {breakdown.map(({ species, count }) => (
+                        <li
+                          key={species.id}
+                          className="flex items-center justify-between border-b border-zinc-200 py-2 text-sm dark:border-zinc-800"
+                        >
+                          <span className="text-zinc-700 dark:text-zinc-300">{species.label}</span>
+                          <span className="font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">
+                            {formatCount(count)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <p className="mt-3 text-xs leading-relaxed text-zinc-400 dark:text-zinc-600">
+                      Estimated from global annual slaughter figures (FAOSTAT and
+                      fishcount.org.uk), spread evenly across this conversation&apos;s
+                      duration — not deaths caused by the conversation itself.
+                    </p>
+                  </div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="The scale of numbers" defaultOpen={true}>
+                  <div className="flex w-full flex-col gap-3">
+                    <p className="text-xs text-zinc-500 italic dark:text-zinc-400">
+                      For scale, not a comparison of suffering — these are among
+                      history&apos;s deadliest events.
+                    </p>
+                    <ul className="flex w-full flex-col">
+                      {COMPARISON_EVENTS.map((event) => (
+                        <li
+                          key={event.id}
+                          className="border-b border-zinc-200 py-2.5 text-sm dark:border-zinc-800"
+                        >
+                          <span className="font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+                            {formatMultiple(computeComparisonMultiple(totalAnimals, event))}×
+                          </span>{" "}
+                          <span className="text-zinc-700 dark:text-zinc-300">
+                            the death toll of {event.label} ({event.yearRange})
+                          </span>
+                          <div className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-600">
+                            {event.source}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CollapsibleSection>
+              </div>
+            </div>
 
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-full border border-zinc-300 px-6 py-3 text-base font-medium text-zinc-950 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
+              className="w-full rounded-full border border-zinc-300 px-6 py-3 text-center text-base font-medium text-zinc-950 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
             >
               New conversation
             </button>
