@@ -15,9 +15,29 @@ export default function ContactPage() {
         <h1 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
           Contact
         </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Activist or just curious — reach out.
-        </p>
+
+        <div className="flex flex-col gap-4 text-left text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <p>
+            Got a comment about the timer, or Active Vegan in general?
+            We&apos;d love to hear from you — whether you loved it, hated
+            it, or have ideas for new features.
+          </p>
+          <p>
+            Want to help the project grow? Whether it&apos;s translation,
+            code, design, or just spreading the word, reach out — every bit
+            helps.
+          </p>
+          <p>
+            Want to support us financially? We prefer contributions in
+            Bitcoin/Lightning, but we&apos;re grateful for any form of
+            support.
+          </p>
+          <p>
+            And of course — use the app! If you share your outreach
+            content, tag us {INSTAGRAM_HANDLE} on Instagram so we can see
+            it and share it too.
+          </p>
+        </div>
 
         <div className="flex flex-col items-center gap-3">
           <a
