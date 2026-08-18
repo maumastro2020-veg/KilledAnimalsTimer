@@ -42,9 +42,9 @@ export default function Home() {
               <p className="max-w-md text-base leading-relaxed text-zinc-600 md:max-w-none dark:text-zinc-400">
                 Turn your outreach time into a number that matters. Start the
                 timer when your conversation begins. Stop it when it ends.
-                See how many animals didn&apos;t make it through that same
-                window of time — broken down by species, with sources you
-                can trust.
+                See how many animals were slaughtered during that same
+                window of time. Broken down by species, with comparisons
+                and sources you can trust.
               </p>
               <Link
                 href="/timer"
