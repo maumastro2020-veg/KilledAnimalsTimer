@@ -232,11 +232,9 @@ export default function Timer() {
               </span>
             </button>
 
-            {state.status === "idle" && (
-              <div className="mt-8">
-                <InstallPrompt />
-              </div>
-            )}
+            <div className={state.status === "idle" ? "mt-8" : "mt-8 invisible"}>
+              <InstallPrompt />
+            </div>
           </div>
         )}
 
