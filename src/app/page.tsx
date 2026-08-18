@@ -63,14 +63,14 @@ export default function Home() {
                 alt="The Timer Calculator's results and start screens, shown on two phones"
                 className="w-full dark:hidden"
                 sizes="(min-width: 768px) 50vw, 90vw"
-                priority={false}
+                priority
               />
               <Image
                 src={timerSectionDark}
                 alt="The Timer Calculator's results and start screens, shown on two phones"
                 className="hidden w-full dark:block"
                 sizes="(min-width: 768px) 50vw, 90vw"
-                priority={false}
+                priority
               />
             </div>
           </div>
