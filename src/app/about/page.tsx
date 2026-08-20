@@ -22,6 +22,13 @@ export default function AboutPage() {
           too. Be active.
         </p>
 
+        <Link
+          href="/why-active-vegan"
+          className="-mt-2 text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-500"
+        >
+          Why we chose the name &ldquo;Active Vegan&rdquo;
+        </Link>
+
         <div className="flex flex-col gap-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
           <p>
             Active Vegan is an initiative built to give vegans and curious
