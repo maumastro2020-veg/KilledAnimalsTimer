@@ -297,7 +297,7 @@ export default function Timer() {
               </div>
 
               <div className="flex w-full flex-col [&>section:first-child]:border-t-0">
-                <CollapsibleSection title="Animal deaths" defaultOpen={false}>
+                <CollapsibleSection title="Killed animals" defaultOpen={false}>
                   <div className="flex w-full flex-col">
                     <ul className="flex w-full flex-col">
                       {breakdown.map(({ species, count }) => (
