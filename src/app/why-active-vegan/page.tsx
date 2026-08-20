@@ -56,6 +56,13 @@ export default function WhyActiveVeganPage() {
             to be active.
           </p>
         </div>
+
+        <Link
+          href="/who-are-we"
+          className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-500"
+        >
+          Who are we?
+        </Link>
       </main>
     </div>
   );

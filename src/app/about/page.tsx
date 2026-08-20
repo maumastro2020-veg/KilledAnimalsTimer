@@ -56,17 +56,6 @@ export default function AboutPage() {
           </p>
 
           <p>
-            This project is maintained by Mauricio Mastropiero, a vegan
-            advocate and builder who believes technology should serve the
-            movement, not just document it.
-          </p>
-
-          <blockquote className="border-l-2 border-emerald-600 pl-4 text-zinc-700 italic dark:border-emerald-500 dark:text-zinc-300">
-            &ldquo;I believe more than 99% of people are already vegan —
-            they just haven&apos;t realized it yet.&rdquo;
-          </blockquote>
-
-          <p>
             We&apos;re just getting started, and there&apos;s a lot more to
             build. If you want to help this project grow — through code,
             ideas, outreach, or a donation — we&apos;d love to hear from
