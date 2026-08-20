@@ -43,7 +43,9 @@ export default function WhyActiveVeganPage() {
             conversation never will. It means moving, nourishing,
             and training your body — because every vegan who runs a
             marathon or lifts weights is breaking, with their own body, the
-            myth that this way of eating makes you weak. It means
+            myth that this way of eating makes you weak. It means taking
+            your health seriously, because a vegan who&apos;s visibly
+            thriving is the most convincing argument there is. It means
             preparing: knowing how to defend your cause with facts, not
             just conviction. And it means doing a little more than
             what&apos;s required — a vegan meal for your family, a
