@@ -46,7 +46,7 @@ export default function AboutPage() {
           </p>
 
           <p>
-            Our first tool is the Active Vegan Timer — an
+            Our first tool is the Active Vegan Timer v0.1 — an
             open-source web app, currently in MVP stage, published under
             GPLv3. It&apos;s built for street outreach activists: start the
             timer when a conversation begins, stop it when it ends, and see
