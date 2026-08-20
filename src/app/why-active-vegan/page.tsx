@@ -38,7 +38,9 @@ export default function WhyActiveVeganPage() {
 
           <p>
             It means speaking up for animals when the opportunity shows up,
-            even when it&apos;s uncomfortable. It means moving, nourishing,
+            even when it&apos;s uncomfortable. It means creating and
+            sharing content, because a post or a video can reach people a
+            conversation never will. It means moving, nourishing,
             and training your body — because every vegan who runs a
             marathon or lifts weights is breaking, with their own body, the
             myth that this way of eating makes you weak. It means
