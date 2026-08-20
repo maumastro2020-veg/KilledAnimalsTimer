@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { computeSpeciesBreakdown, computeTotalAnimalsKilled } from "@/lib/deathRates";
 import { COMPARISON_EVENTS, computeComparisonMultiple } from "@/lib/comparisonEvents";
 import { formatCount, formatHeroAbbreviation, formatMultiple } from "@/lib/format";
@@ -9,6 +10,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 
 const STORAGE_KEY = "kat_timer_state";
 const TIMER_EVENT = "kat-timer-change";
+const SITE_URL = "https://www.activevegan.org";
 
 type TimerStatus = "idle" | "running" | "stopped";
 
@@ -347,6 +349,20 @@ export default function Timer() {
                     </ul>
                   </div>
                 </CollapsibleSection>
+              </div>
+            </div>
+
+            <div className="flex w-full flex-col">
+              <div className="border-b-[1.5px] border-zinc-950 pb-2 text-xs font-bold uppercase tracking-wide text-zinc-950 dark:border-zinc-50 dark:text-zinc-50">
+                Give them the link
+              </div>
+              <div className="mt-4 flex flex-col items-center gap-3">
+                <div className="rounded-xl bg-white p-3">
+                  <QRCodeSVG value={SITE_URL} size={140} />
+                </div>
+                <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+                  Let them scan it — {SITE_URL.replace("https://", "")}
+                </p>
               </div>
             </div>
 
