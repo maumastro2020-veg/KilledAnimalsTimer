@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { computeSpeciesBreakdown, computeTotalAnimalsKilled } from "@/lib/deathRates";
 import { COMPARISON_EVENTS, computeComparisonMultiple } from "@/lib/comparisonEvents";
-import { formatCount, formatHeroAbbreviation, formatMultiple } from "@/lib/format";
+import { formatCount, formatElapsed, formatHeroAbbreviation, formatMultiple } from "@/lib/format";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import InstallPrompt from "@/components/InstallPrompt";
 
@@ -94,17 +94,6 @@ function useClock(active: boolean): number {
   );
 }
 
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return hours > 0
-    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    : `${pad(minutes)}:${pad(seconds)}`;
-}
-
 // Hero digits are always 1-3 characters (each unit tier tops out just under
 // 1000), so sizing keys off digit count rather than measuring rendered width.
 // The vw coefficients are tuned against the max-w-sm (384px) content column,
@@ -152,6 +141,34 @@ export default function Timer() {
       : state.status === "stopped" && state.startedAt !== null && state.stoppedAt !== null
         ? state.stoppedAt - state.startedAt
         : 0;
+
+  const [emailInput, setEmailInput] = useState("");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const handleEmailSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setEmailStatus("sending");
+      setEmailError(null);
+      try {
+        const res = await fetch("/api/capture-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: emailInput, elapsedMs }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}) as { error?: string });
+          throw new Error(data.error ?? "Couldn't send the email");
+        }
+        setEmailStatus("sent");
+      } catch (err) {
+        setEmailStatus("error");
+        setEmailError(err instanceof Error ? err.message : "Couldn't send the email");
+      }
+    },
+    [emailInput, elapsedMs],
+  );
 
   const totalAnimals = useMemo(() => computeTotalAnimalsKilled(elapsedMs), [elapsedMs]);
   const breakdown = useMemo(() => computeSpeciesBreakdown(elapsedMs), [elapsedMs]);
@@ -350,6 +367,45 @@ export default function Timer() {
                   </div>
                 </CollapsibleSection>
               </div>
+            </div>
+
+            <div className="flex w-full flex-col">
+              <div className="border-b-[1.5px] border-zinc-950 pb-2 text-xs font-bold uppercase tracking-wide text-zinc-950 dark:border-zinc-50 dark:text-zinc-50">
+                Send them this
+              </div>
+              {emailStatus === "sent" ? (
+                <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+                  Sent — check your inbox for the full breakdown and where to learn more.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    Get their email and we&apos;ll send the full breakdown, plus where to
+                    learn more.
+                  </p>
+                  <form onSubmit={handleEmailSubmit} className="mt-3 flex w-full gap-2">
+                    <input
+                      type="email"
+                      required
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="their@email.com"
+                      disabled={emailStatus === "sending"}
+                      className="w-full min-w-0 rounded-full border border-zinc-300 bg-transparent px-4 py-2.5 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-emerald-600 focus:outline-none dark:border-zinc-700 dark:text-zinc-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={emailStatus === "sending"}
+                      className="shrink-0 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {emailStatus === "sending" ? "Sending…" : "Send"}
+                    </button>
+                  </form>
+                  {emailStatus === "error" && (
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-500">{emailError}</p>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="flex w-full flex-col">
