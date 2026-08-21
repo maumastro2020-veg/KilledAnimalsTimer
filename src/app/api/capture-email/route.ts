@@ -35,7 +35,7 @@ function buildEmailHtml(elapsedMs: number): string {
   const comparisonRows = COMPARISON_EVENTS.map(
     (event) => `
       <tr>
-        <td style="padding:6px 0;color:#3f3f46;font-size:14px;border-bottom:1px solid #e4e4e7;">the death toll of ${escapeHtml(event.label)} (${escapeHtml(event.yearRange)})</td>
+        <td style="padding:6px 0;color:#3f3f46;font-size:14px;border-bottom:1px solid #e4e4e7;">The death toll of ${escapeHtml(event.label)} (${escapeHtml(event.yearRange)})</td>
         <td style="padding:6px 0;color:#09090b;font-size:14px;font-weight:600;text-align:right;border-bottom:1px solid #e4e4e7;">${formatMultiple(computeComparisonMultiple(total, event))}×</td>
       </tr>`,
   ).join("");
